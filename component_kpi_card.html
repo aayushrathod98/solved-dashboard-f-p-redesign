@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Component — KPI Card (Score Card)</title>
+<style>
+:root{
+  /* Tokens synced to NysTheme (flutter-dashboard nys_theme.dart) */
+  --dark:#2d3748; --dark2:#374151; --bg:#eef0f4; --card:#fff; --border:#e2e8f0;
+  --text:#1a202c; --muted:#718096; --faint:#a0aec0; --secondary:#4a5568;
+  --l1:#e24b4a; --l2:#ef9f27; --l3:#639922; --l4:#378add;
+  --purple:#8158c4; --amber:#f5b800; --green:#639922; --orange:#ef9f27; --blue:#378add;
+  --gold:#c8972a;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{background:var(--bg);color:var(--text);font-size:13px;padding:26px}
+.comp-title{font-size:15px;font-weight:700;color:var(--secondary);margin-bottom:4px}
+.comp-sub{font-size:11px;color:var(--faint);margin-bottom:16px}
+/* Score card row — cards sit directly on the page background (no wrapper) */
+.ov-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:12px}
+/* NysScoreCard: white card + thin border + shadow, flush 4px level stripe,
+   13px muted label, 32px w800 value, 12px faint sub, 13px w800 delta */
+.kpi{position:relative;border:1px solid var(--border);border-radius:8px;padding:12px 12px 13px 14px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.07);overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--muted)}
+.kpi .lbl{font-size:13px;color:#718096;font-weight:600;line-height:1.25}
+.kpi .val{font-size:32px;font-weight:800;line-height:1;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .sub{font-size:12px;color:#a0aec0;margin-top:6px}
+.kpi .dlt{font-size:13px;font-weight:800;color:#639922;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi.c-dark::before{background:#4a5568} .kpi.c-dark .val{color:#4a5568}
+.kpi.c-gold::before{background:#c8972a} .kpi.c-gold .val{color:#c8972a}
+.kpi.c-blue::before{background:#378add} .kpi.c-blue .val{color:#378add}
+.kpi.c-green::before{background:#639922} .kpi.c-green .val{color:#639922}
+.kpi.c-orange::before{background:var(--orange)} .kpi.c-orange .val{color:var(--orange)}
+.kpi.c-purple::before{background:var(--purple)} .kpi.c-purple .val{color:var(--purple)}
+.kpi.c-red::before{background:#e24b4a} .kpi.c-red .val{color:#e24b4a}
+@media (max-width:1100px){.ov-grid{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:640px){.ov-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="comp-title">KPI Card (Score Card)</div>
+<div class="comp-sub">Standalone component — values computed live from the same seeded K–5 F&amp;P dataset as the full prototype (229 students).</div>
+
+<div class="ov-grid" id="ovGrid"><!-- cards rendered by JS --></div>
+
+<script>
+/* ================= DATA (identical to the full prototype) ================= */
+const BANDS={K:{1:['A'],2:['B'],3:['C','D'],4:['E','F']},
+ '1':{1:['C','D'],2:['E','F'],3:['G','H','I','J'],4:['K','L']},
+ '2':{1:['F','G','H'],2:['I','J','K'],3:['L','M'],4:['N','O','P']},
+ '3':{1:['I','J','K'],2:['L','M','N'],3:['O','P'],4:['Q','R','S']},
+ '4':{1:['L','M','N'],2:['O','P','Q'],3:['R','S'],4:['T','U']},
+ '5':{1:['O','P','Q'],2:['R','S','T'],3:['U','V'],4:['W','X','Y','Z']}};
+const HOMEROOMS={K:['11','12','13'],'1':['101','102','103'],'2':['201','202','203'],'3':['301','302','303'],'4':['401','402','404'],'5':['501','502','503']};
+const REAL=[
+ {name:'ELERS, Loaai',grade:'3',hr:'303',sex:'M',iep:'Yes',ell:'No',eth:'Black',boy:[2,'L'],moy:[3,'O'],eoy:[2,'O']},
+ {name:'CARRANZA, Angie',grade:'5',hr:'501',sex:'M',iep:'No',ell:'No',eth:'Black',boy:[2,'R'],moy:[4,'V'],eoy:[1,'T']},
+ {name:'GARIDIS, Omniya Yas',grade:'2',hr:'203',sex:'M',iep:'Yes',ell:'Yes',eth:'Hispanic',boy:[2,'I'],moy:[2,'K'],eoy:[2,'L']},
+ {name:'ABDRABOU, Hala',grade:'3',hr:'302',sex:'F',iep:'No',ell:'No',eth:'Black',boy:[4,'N'],moy:[4,'S'],eoy:[1,'J']},
+ {name:'ANAGNOSTOS, Karamjot',grade:'4',hr:'401',sex:'M',iep:'No',ell:'No',eth:'Black',boy:[1,'M'],moy:[2,'Q'],eoy:[3,'S']},
+ {name:'ANDRADE, Kenneth',grade:'4',hr:'401',sex:'M',iep:'Yes',ell:'No',eth:'Black',boy:[3,'R'],moy:[2,'Q'],eoy:[3,'S']},
+ {name:'CARRERA, Hana',grade:'4',hr:'401',sex:'F',iep:'No',ell:'No',eth:'Hispanic',boy:[3,'R'],moy:[3,'S'],eoy:[4,'U']},
+ {name:'CORTIZO, Mehvaj',grade:'4',hr:'402',sex:'M',iep:'No',ell:'No',eth:'Hispanic',boy:[3,'S'],moy:[3,'S'],eoy:[4,'T']},
+ {name:'ABDELHADY, Fady',grade:'5',hr:'501',sex:'M',iep:'No',ell:'No',eth:'Hispanic',boy:[1,'P'],moy:[3,'U'],eoy:[4,'W']},
+ {name:'ABOTALEB, Jacqueline',grade:'1',hr:'101',sex:'F',iep:'No',ell:'No',eth:'White',boy:[2,'E'],moy:[2,'F'],eoy:[2,'F']},
+ {name:'KALLONAS, Nicolasa',grade:'1',hr:'102',sex:'M',iep:'No',ell:'No',eth:'Hispanic',boy:[1,'C'],moy:[2,'E'],eoy:[4,'K']}
+];
+const MARG={boy:{1:38,2:79,3:69,4:43},moy:{1:30,2:48,3:98,4:53},eoy:{1:20,2:43,3:106,4:60}};
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd=mulberry32(456);
+const SUR=['ACOSTA','BAILEY','BARNES','BRAVO','CALDERON','CAMPOS','CASTRO','CHEN','CLARKE','DELGADO','DIALLO','DUKE','ESPINAL','FIGUEROA','FLORES','FRANCIS','GOMEZ','GRANT','GUZMAN','HARRIS','HUANG','IBRAHIM','JACKSON','JAMES','JIMENEZ','KHAN','LOPEZ','MARTE','MENDOZA','MORALES','NUNEZ','OKAFOR','ORTIZ','PAULINO','PEREZ','RAMOS','REYES','RIVERA','ROSARIO','SANTOS','TAVAREZ','TORRES','VARGAS','WILLIAMS','WRIGHT'];
+const FIR=['Aaliyah','Amir','Ana','Andre','Aria','Brandon','Camila','Carlos','Chloe','Daniel','Destiny','Elijah','Emma','Ethan','Fatima','Gabriel','Genesis','Hassan','Isabella','Jayden','Jose','Josiah','Kayla','Kevin','Leah','Liam','Luna','Malik','Maria','Mateo','Maya','Melanie','Mia','Miguel','Naomi','Nathan','Nia','Noah','Olivia','Omar','Sofia','Tyler','Valeria','Xavier','Zoe'];
+const ETHS=['Black','Hispanic','White','Asian'];
+function pick(a){return a[Math.floor(rnd()*a.length)]}
+function letterFor(g,l,i){const b=BANDS[g][l];return b[i%b.length]}
+const STUDENTS=[...REAL.map((r,i)=>({id:'r'+i,...r,real:true}))];
+const QUOTA={K:39,'1':37,'2':37,'3':37,'4':32,'5':36};
+const used=new Set(REAL.map(r=>r.name));
+let n=0;
+for(const g of ['K','1','2','3','4','5']){
+  for(let i=0;i<QUOTA[g];i++){
+    let nm;do{nm=pick(SUR)+', '+pick(FIR)}while(used.has(nm));used.add(nm);
+    STUDENTS.push({id:'g'+(n++),name:nm,grade:g,hr:HOMEROOMS[g][i%HOMEROOMS[g].length],
+      sex:rnd()<.5?'M':'F',iep:rnd()<.17?'Yes':'No',ell:rnd()<.14?'Yes':'No',eth:ETHS[Math.floor(rnd()*4)],
+      boy:null,moy:null,eoy:null,real:false});
+  }
+}
+function poolFor(term){
+  const m={...MARG[term]};
+  REAL.forEach(r=>m[r[term][0]]--);
+  const pool=[];for(const l of [1,2,3,4])for(let i=0;i<m[l];i++)pool.push(l);
+  return pool;
+}
+const gen=STUDENTS.filter(s=>!s.real);
+let bp=poolFor('boy');for(let i=bp.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[bp[i],bp[j]]=[bp[j],bp[i]]}
+gen.forEach((s,i)=>{const l=bp[i];s.boy=[l,letterFor(s.grade,l,i)]});
+function assignSorted(term,prev){
+  const pool=poolFor(term).sort((a,b)=>a-b);
+  const order=[...gen].map((s,i)=>({s,k:s[prev][0]+rnd()*.8})).sort((a,b)=>a.k-b.k);
+  order.forEach((o,i)=>{const l=pool[i];o.s[term]=[l,letterFor(o.s.grade,l,i)]});
+}
+assignSorted('moy','boy');assignSorted('eoy','moy');
+
+/* ================= SCORE CARD ROW (identical markup to the full prototype) ================= */
+function counts(P,term){const c={1:0,2:0,3:0,4:0};P.forEach(s=>c[s[term][0]]++);return c}
+function pct(a,b){return b?Math.round(a/b*100):0}
+function renderOverview(){
+  const P=STUDENTS;const n=P.length||1;
+  const cm=counts(P,'moy');const above=cm[3]+cm[4];const below=cm[1]+cm[2];
+  const avg=t=>P.reduce((a,s)=>a+s[t][0],0)/n;
+  const growth=avg('moy')-avg('boy');
+  const improved=P.filter(s=>s.moy[0]>s.boy[0]).length;
+  document.getElementById('ovGrid').innerHTML=
+    `<div class="kpi c-dark"><div class="lbl">Total Students</div><div class="val">${P.length}</div><div class="sub">All enrolled</div></div>
+     <div class="kpi c-green"><div class="lbl">At/Above Level (L3–L4)</div><div class="val">${above}</div><div class="sub">${pct(above,P.length)}% at/above level</div></div>
+     <div class="kpi c-gold"><div class="lbl">Avg Growth (BOY→MOY)</div><div class="val">${growth>=0?'+':''}${growth.toFixed(1)}</div><div class="sub">Avg levels gained per student</div><div class="dlt">↑ ${improved} of ${P.length} improved</div></div>
+     <div class="kpi c-blue"><div class="lbl">BOY Data</div><div class="val">${P.length}</div><div class="sub">100% have BOY</div></div>
+     <div class="kpi c-green"><div class="lbl">MOY Data</div><div class="val">${P.length}</div><div class="sub">100% have MOY</div></div>
+     <div class="kpi c-red"><div class="lbl">Below Level (L1–L2)</div><div class="val">${below}</div><div class="sub">${pct(below,P.length)}% below level</div></div>`;
+}
+renderOverview();
+</script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Component — Student Table</title>
+<style>
+:root{
+  /* Tokens synced to NysTheme (flutter-dashboard nys_theme.dart) */
+  --dark:#2d3748; --dark2:#374151; --bg:#eef0f4; --card:#fff; --border:#e2e8f0;
+  --text:#1a202c; --muted:#718096; --faint:#a0aec0; --secondary:#4a5568;
+  --l1:#e24b4a; --l2:#ef9f27; --l3:#639922; --l4:#378add;
+  --purple:#8158c4; --green:#639922; --orange:#ef9f27; --blue:#378add;
+  --gold:#c8972a;
+  --l1bg:#fef2f2; --l3bg:#f0fdf4;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{background:var(--bg);color:var(--text);font-size:13px;padding:26px}
+.comp-title{font-size:15px;font-weight:700;color:var(--secondary);margin-bottom:4px}
+.comp-sub{font-size:11px;color:var(--faint);margin-bottom:16px}
+/* Panel (AppTableCard) */
+.panel{background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 3px rgba(20,25,40,.06)}
+/* AppCollapsibleCard header: 14px/20px padding, 13px w600 white title */
+.panel-hdr{background:var(--dark);color:#fff;display:flex;align-items:center;padding:14px 20px;gap:8px}
+.panel-hdr b{font-size:13px;font-weight:600}
+.panel-hdr .sp{flex:1}
+.pbtn{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.15);color:#fff;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer}
+/* gold Export dropdown (AppExportDropdown) */
+.pbtn.amber{background:#c09832;color:#1a1a1a;border:none;font-weight:700;font-size:12px;letter-spacing:.2px;border-radius:7px;padding:7px 14px}
+/* dark Expand button (AppExpandButton) */
+#expandBtn{background:#1e2a3a;border:1.2px solid #3a4a5c;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:600;letter-spacing:.2px}
+/* Export dropdown (3 formats, like live table) */
+.exp-wrap{position:relative}
+.exp-menu{display:none;position:absolute;right:0;top:120%;background:#fff;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.22);padding:10px;min-width:200px;z-index:30}
+.exp-menu.open{display:block}
+.exp-menu a{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:8px;font-size:13px;font-weight:500;color:#1e293b;cursor:pointer;text-decoration:none}
+.exp-menu a:hover{background:#f2f4f7}
+.eic{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+/* chevron button (AppCollapsibleCard) */
+.f-chevron{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:13px;cursor:pointer;flex-shrink:0;transition:transform .25s ease}
+.f-chevron svg{width:16px;height:16px;fill:#fff}
+.panel-hdr:hover .f-chevron{background:rgba(255,255,255,.22)}
+.panel.collapsed .f-chevron{transform:rotate(-90deg)}
+.panel.collapsed .tbl-filters,.panel.collapsed .tbl-scroll{display:none}
+/* Table filter strip — AppTableFilterBar / AppFilterPill:
+   #FAFBFC bar, radius-20 pills (1.5px border, 11px w600), faint labels */
+.tbl-filters{position:relative;margin:14px;padding:12px 16px;background:#fafbfc;border:1px solid var(--border);border-radius:7px;display:flex;flex-direction:column;gap:12px}
+.fr-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.fdiv{width:1px;align-self:stretch;background:var(--border);margin:2px 0}
+.search{border:1.2px solid var(--border);border-radius:6px;padding:7px 10px;font-size:11px;width:170px;background:#fff;color:var(--secondary)}
+.search::placeholder{color:var(--faint)}
+.fgroup{display:flex;align-items:center;gap:6px;flex-wrap:nowrap}
+.fgroup.fg-class{flex:1;min-width:0}
+.fgroup label{font-size:10px;font-weight:700;color:var(--faint);letter-spacing:.6px;flex-shrink:0}
+.pill{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:600;color:var(--secondary)}
+.pill.on{background:var(--dark);color:#fff;border-color:var(--dark)}
+/* level pills: 12% level tint + level-color border/text inactive, filled active */
+.pill.p1{border-color:var(--l1);color:var(--l1);background:rgba(226,75,74,.12)} .pill.p1.on{background:var(--l1);color:#fff}
+.pill.p2{border-color:var(--l2);color:var(--l2);background:rgba(239,159,39,.12)} .pill.p2.on{background:var(--l2);color:#fff}
+.pill.p3{border-color:var(--l3);color:var(--l3);background:rgba(99,153,34,.12)} .pill.p3.on{background:var(--l3);color:#fff}
+.pill.p4{border-color:var(--l4);color:var(--l4);background:rgba(55,138,221,.12)} .pill.p4.on{background:var(--l4);color:#fff}
+.counter{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:600;color:var(--faint);z-index:2}
+.fr-mid{padding-right:120px}
+.letter-chip{background:#5b7fa6;color:#fff;border-radius:14px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer}
+.tbl-scroll{overflow:auto;max-height:520px}
+.tbl-scroll.expanded{max-height:none}
+/* AppTableExpandDialog: fullscreen white sheet (radius 12), dark 52px header
+   with 14px w600 title + 28px ✕ close chip, body fills the viewport */
+.expand-overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(15,20,30,.55);padding:18px}
+.expand-overlay.open{display:block}
+.expand-dialog{background:#fff;border-radius:12px;overflow:hidden;height:100%;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+.expand-hdr{background:var(--dark);color:#fff;min-height:52px;display:flex;align-items:center;padding:8px 20px;gap:8px;flex-shrink:0}
+.expand-hdr b{font-size:14px;font-weight:600;letter-spacing:.2px}
+.expand-hdr .sp{flex:1}
+.dlg-close{width:28px;height:28px;border-radius:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.dlg-close svg{width:16px;height:16px;fill:#fff}
+.expand-body{flex:1;overflow:auto}
+/* CLASS filter row scrolls horizontally when many homerooms */
+#classPills{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;padding-bottom:2px}
+#classPills::-webkit-scrollbar{height:6px}
+#classPills::-webkit-scrollbar-thumb{background:#d3d8e0;border-radius:3px}
+/* Table body — DataTable2 reference: dark header (11px w700 white, ls .3),
+   11px w500 secondary cells, white/#FAFAFB zebra, AppLevelTag pills */
+table.stu{border-collapse:collapse;width:100%;font-size:11px;color:var(--secondary)}
+table.stu th{background:var(--dark);color:#fff;font-size:11px;font-weight:700;letter-spacing:.3px;padding:9px 8px;text-align:left;white-space:nowrap;position:sticky;top:0;cursor:pointer;user-select:none;z-index:2;border-right:1px solid rgba(255,255,255,.18)}
+table.stu th small{display:block;color:rgba(255,255,255,.55);font-weight:400;font-size:8px;letter-spacing:0}
+table.stu td{padding:6px 8px;border-bottom:.5px solid var(--border);border-right:.5px solid var(--border);white-space:nowrap;font-weight:500}
+table.stu tbody tr:nth-child(even){background:#fafafb}
+/* AppLevelTag: 10px w700 level-color text, 12% tint, 1.5px border, radius 20 */
+.lvl{display:inline-block;border-radius:20px;padding:4px 10px;font-size:10px;font-weight:700;letter-spacing:.4px;min-width:74px;text-align:center;background:transparent;border:1.5px solid;background-clip:padding-box}
+.lvl.v1{color:var(--l1);border-color:var(--l1);background:rgba(226,75,74,.12)}
+.lvl.v2{color:var(--l2);border-color:var(--l2);background:rgba(239,159,39,.12)}
+.lvl.v3{color:var(--l3);border-color:var(--l3);background:rgba(99,153,34,.12)}
+.lvl.v4{color:var(--l4);border-color:var(--l4);background:rgba(55,138,221,.12)}
+.c1{color:var(--l1)} .c2{color:var(--l2)} .c3{color:var(--l3)} .c4{color:var(--l4)}
+.sname{font-weight:600;font-size:12px}
+.yes{color:var(--l1);font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="comp-title">Student Table</div>
+<div class="comp-sub">Standalone component — dark table card with filter strip (level multi-select, class, status, search), sortable columns, Export menu and the fullscreen Expand dialog. Same seeded K–5 dataset (229 students).</div>
+
+<div class="panel" id="tablePanel">
+  <div class="panel-hdr"><b id="tblTitle">Student F&amp;P Detail (K–5)</b><span class="sp"></span>
+    <span class="exp-wrap">
+      <button class="pbtn amber" id="exportBtn">↓ Export ▾</button>
+      <span class="exp-menu" id="expMenu">
+        <a data-exp="csv"><span class="eic" style="background:#eef0f4;color:#5f6672">🗎</span> CSV (.csv)</a>
+        <a data-exp="gs"><span class="eic" style="background:#e8f0fe;color:#1a73e8">▲+</span> Google Sheets</a>
+        <a data-exp="pdf"><span class="eic" style="background:#fdecea;color:#e64a45">PDF</span> PDF</a>
+      </span>
+    </span>
+    <button class="pbtn" id="expandBtn">⛶ Expand</button>
+    <button class="f-chevron" data-collapse="tablePanel"><svg viewBox="0 0 24 24"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg></button>
+  </div>
+  <div class="tbl-filters">
+    <span class="counter" id="counter"></span>
+    <div class="fr-row fr-mid">
+      <input class="search" id="q" placeholder="🔍 Search Student">
+      <span class="letter-chip" id="letterChip" style="display:none" title="Click to clear"></span>
+      <span class="fdiv"></span>
+      <div class="fgroup"><label>LEVEL</label>
+        <button class="pill on" data-f="lvl" data-val="all">All</button>
+        <button class="pill p1" data-f="lvl" data-val="1">L1</button>
+        <button class="pill p2" data-f="lvl" data-val="2">L2</button>
+        <button class="pill p3" data-f="lvl" data-val="3">L3</button>
+        <button class="pill p4" data-f="lvl" data-val="4">L4</button>
+      </div>
+      <div class="fgroup fg-class"><label>CLASS</label><span id="classPills"></span></div>
+    </div>
+    <div class="fr-row">
+      <div class="fgroup"><label>STATUS</label>
+        <button class="pill on" data-f="st" data-val="all">All</button>
+        <button class="pill" data-f="st" data-val="iep">IEP</button>
+        <button class="pill" data-f="st" data-val="ell">ELL</button>
+      </div>
+    </div>
+  </div>
+  <div class="tbl-scroll" id="tblScroll">
+    <table class="stu" id="stuTable"><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- fullscreen table dialog (AppTableExpandDialog) — the live table
+     node is moved in here while open so filters/sort stay live -->
+<div class="expand-overlay" id="expandOverlay">
+  <div class="expand-dialog">
+    <div class="expand-hdr"><b id="expTitle">Student F&amp;P Detail</b><span class="sp"></span><button class="dlg-close" id="expandClose" title="Close"><svg viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button></div>
+    <div class="expand-body" id="expandBody"></div>
+  </div>
+</div>
+
+<script>
+/* ================= DATA (identical to the full prototype) ================= */
+const BANDS={K:{1:['A'],2:['B'],3:['C','D'],4:['E','F']},
+ '1':{1:['C','D'],2:['E','F'],3:['G','H','I','J'],4:['K','L']},
+ '2':{1:['F','G','H'],2:['I','J','K'],3:['L','M'],4:['N','O','P']},
+ '3':{1:['I','J','K'],2:['L','M','N'],3:['O','P'],4:['Q','R','S']},
+ '4':{1:['L','M','N'],2:['O','P','Q'],3:['R','S'],4:['T','U']},
+ '5':{1:['O','P','Q'],2:['R','S','T'],3:['U','V'],4:['W','X','Y','Z']}};
+const HOMEROOMS={K:['11','12','13'],'1':['101','102','103'],'2':['201','202','203'],'3':['301','302','303'],'4':['401','402','404'],'5':['501','502','503']};
+const REAL=[
+ {name:'ELERS, Loaai',grade:'3',hr:'303',sex:'M',iep:'Yes',ell:'No',eth:'Black',boy:[2,'L'],moy:[3,'O'],eoy:[2,'O']},
+ {name:'CARRANZA, Angie',grade:'5',hr:'501',sex:'M',iep:'No',ell:'No',eth:'Black',boy:[2,'R'],moy:[4,'V'],eoy:[1,'T']},
+ {name:'GARIDIS, Omniya Yas',grade:'2',hr:'203',sex:'M',iep:'Yes',ell:'Yes',eth:'Hispanic',boy:[2,'I'],moy:[2,'K'],eoy:[2,'L']},
+ {name:'ABDRABOU, Hala',grade:'3',hr:'302',sex:'F',iep:'No',ell:'No',eth:'Black',boy:[4,'N'],moy:[4,'S'],eoy:[1,'J']},
+ {name:'ANAGNOSTOS, Karamjot',grade:'4',hr:'401',sex:'M',iep:'No',ell:'No',eth:'Black',boy:[1,'M'],moy:[2,'Q'],eoy:[3,'S']},
+ {name:'ANDRADE, Kenneth',grade:'4',hr:'401',sex:'M',iep:'Yes',ell:'No',eth:'Black',boy:[3,'R'],moy:[2,'Q'],eoy:[3,'S']},
+ {name:'CARRERA, Hana',grade:'4',hr:'401',sex:'F',iep:'No',ell:'No',eth:'Hispanic',boy:[3,'R'],moy:[3,'S'],eoy:[4,'U']},
+ {name:'CORTIZO, Mehvaj',grade:'4',hr:'402',sex:'M',iep:'No',ell:'No',eth:'Hispanic',boy:[3,'S'],moy:[3,'S'],eoy:[4,'T']},
+ {name:'ABDELHADY, Fady',grade:'5',hr:'501',sex:'M',iep:'No',ell:'No',eth:'Hispanic',boy:[1,'P'],moy:[3,'U'],eoy:[4,'W']},
+ {name:'ABOTALEB, Jacqueline',grade:'1',hr:'101',sex:'F',iep:'No',ell:'No',eth:'White',boy:[2,'E'],moy:[2,'F'],eoy:[2,'F']},
+ {name:'KALLONAS, Nicolasa',grade:'1',hr:'102',sex:'M',iep:'No',ell:'No',eth:'Hispanic',boy:[1,'C'],moy:[2,'E'],eoy:[4,'K']}
+];
+const MARG={boy:{1:38,2:79,3:69,4:43},moy:{1:30,2:48,3:98,4:53},eoy:{1:20,2:43,3:106,4:60}};
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd=mulberry32(456);
+const SUR=['ACOSTA','BAILEY','BARNES','BRAVO','CALDERON','CAMPOS','CASTRO','CHEN','CLARKE','DELGADO','DIALLO','DUKE','ESPINAL','FIGUEROA','FLORES','FRANCIS','GOMEZ','GRANT','GUZMAN','HARRIS','HUANG','IBRAHIM','JACKSON','JAMES','JIMENEZ','KHAN','LOPEZ','MARTE','MENDOZA','MORALES','NUNEZ','OKAFOR','ORTIZ','PAULINO','PEREZ','RAMOS','REYES','RIVERA','ROSARIO','SANTOS','TAVAREZ','TORRES','VARGAS','WILLIAMS','WRIGHT'];
+const FIR=['Aaliyah','Amir','Ana','Andre','Aria','Brandon','Camila','Carlos','Chloe','Daniel','Destiny','Elijah','Emma','Ethan','Fatima','Gabriel','Genesis','Hassan','Isabella','Jayden','Jose','Josiah','Kayla','Kevin','Leah','Liam','Luna','Malik','Maria','Mateo','Maya','Melanie','Mia','Miguel','Naomi','Nathan','Nia','Noah','Olivia','Omar','Sofia','Tyler','Valeria','Xavier','Zoe'];
+const ETHS=['Black','Hispanic','White','Asian'];
+function pick(a){return a[Math.floor(rnd()*a.length)]}
+function letterFor(g,l,i){const b=BANDS[g][l];return b[i%b.length]}
+const STUDENTS=[...REAL.map((r,i)=>({id:'r'+i,...r,real:true}))];
+const QUOTA={K:39,'1':37,'2':37,'3':37,'4':32,'5':36};
+const used=new Set(REAL.map(r=>r.name));
+let n=0;
+for(const g of ['K','1','2','3','4','5']){
+  for(let i=0;i<QUOTA[g];i++){
+    let nm;do{nm=pick(SUR)+', '+pick(FIR)}while(used.has(nm));used.add(nm);
+    STUDENTS.push({id:'g'+(n++),name:nm,grade:g,hr:HOMEROOMS[g][i%HOMEROOMS[g].length],
+      sex:rnd()<.5?'M':'F',iep:rnd()<.17?'Yes':'No',ell:rnd()<.14?'Yes':'No',eth:ETHS[Math.floor(rnd()*4)],
+      boy:null,moy:null,eoy:null,real:false});
+  }
+}
+function poolFor(term){
+  const m={...MARG[term]};
+  REAL.forEach(r=>m[r[term][0]]--);
+  const pool=[];for(const l of [1,2,3,4])for(let i=0;i<m[l];i++)pool.push(l);
+  return pool;
+}
+const gen=STUDENTS.filter(s=>!s.real);
+let bp=poolFor('boy');for(let i=bp.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[bp[i],bp[j]]=[bp[j],bp[i]]}
+gen.forEach((s,i)=>{const l=bp[i];s.boy=[l,letterFor(s.grade,l,i)]});
+function assignSorted(term,prev){
+  const pool=poolFor(term).sort((a,b)=>a-b);
+  const order=[...gen].map((s,i)=>({s,k:s[prev][0]+rnd()*.8})).sort((a,b)=>a.k-b.k);
+  order.forEach((o,i)=>{const l=pool[i];o.s[term]=[l,letterFor(o.s.grade,l,i)]});
+}
+assignSorted('moy','boy');assignSorted('eoy','moy');
+
+/* ================= TABLE (identical behaviour to the full prototype) ================= */
+const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
+const TNAME={boy:'BOY',moy:'MOY',eoy:'EOY'};
+function pct(a,b){return b?Math.round(a/b*100):0}
+// lvl is MULTI-SELECT: an array of selected levels (1-4); empty = all levels.
+const state={lvl:[],cls:'all',st:'all',q:'',letter:null,sort:{col:'name',dir:1}};
+function lvlTerm(){return 'moy'}
+function lvlMatch(s){return !state.lvl.length||state.lvl.includes(s[lvlTerm()][0])}
+function tableRows(){
+  return STUDENTS.filter(s=>lvlMatch(s)
+    &&(state.cls==='all'||s.hr===state.cls)
+    &&(state.st==='all'||(state.st==='iep'?s.iep==='Yes':s.ell==='Yes'))
+    &&(!state.letter||s[state.letter.t][1]===state.letter.k)
+    &&(!state.q||s.name.toLowerCase().includes(state.q)));
+}
+const COLS=['name','grade','hr','sex','iep','ell','eth','boy','moy','eoy'];
+const HEAD={name:'Student Name',grade:'Grade',hr:'Homeroom',sex:'Sex',iep:'IEP',ell:'ELL',eth:'Ethnicity',
+ boy:'F&P BOY|Sep 2025',moy:'F&P MOY|Jan 2026',eoy:'F&P EOY|Jun 2026'};
+function sortVal(s,c){switch(c){case 'name':return s.name;case 'grade':return s.grade==='K'?0:+s.grade;case 'hr':return s.hr;
+ case 'sex':return s.sex;case 'iep':return s.iep;case 'ell':return s.ell;case 'eth':return s.eth;
+ case 'boy':case 'moy':case 'eoy':return s[c][0]*100+s[c][1].charCodeAt(0)}}
+function pill(a){return `<span class="lvl v${a[0]}">Level ${a[0]} (${a[1]})</span>`}
+function renderTable(){
+  const rows=tableRows();
+  rows.sort((a,b)=>{const x=sortVal(a,state.sort.col),y=sortVal(b,state.sort.col);return (x>y?1:x<y?-1:0)*state.sort.dir});
+  $('#thead').innerHTML='<tr>'+COLS.map(c=>{const [h,sub]=HEAD[c].split('|');const ar=state.sort.col===c?(state.sort.dir>0?' ↑':' ↓'):' <span style="color:#8a93a8;font-size:9px">⇕</span>';
+    return `<th data-c="${c}">${h}${ar}${sub?`<small>${sub}</small>`:''}</th>`}).join('')+'</tr>';
+  $('#tbody').innerHTML=rows.map(s=>{
+    const cur=s[lvlTerm()][0];
+    return '<tr>'+COLS.map(c=>{switch(c){
+      case 'name':return `<td class="sname c${cur}">${s.name}</td>`;
+      case 'grade':return `<td>${s.grade==='K'?'0K':s.grade}</td>`;case 'hr':return `<td>${s.hr}</td>`;case 'sex':return `<td>${s.sex}</td>`;
+      case 'iep':return `<td class="${s.iep==='Yes'?'yes':''}">${s.iep}</td>`;
+      case 'ell':return `<td class="${s.ell==='Yes'?'yes':''}">${s.ell}</td>`;
+      case 'eth':return `<td>${s.eth}</td>`;
+      case 'boy':case 'moy':case 'eoy':return `<td>${pill(s[c])}</td>`}}).join('')+'</tr>';
+  }).join('');
+  $('#counter').textContent=`${rows.length} of ${STUDENTS.length} students`;
+}
+function renderClassPills(){
+  const hrs=[].concat(...Object.values(HOMEROOMS));
+  $('#classPills').innerHTML=`<button class="pill ${state.cls==='all'?'on':''}" data-f="cls" data-val="all">All</button>`
+    +hrs.map(h=>`<button class="pill ${state.cls===h?'on':''}" data-f="cls" data-val="${h}">${h}</button>`).join('');
+  $$('#classPills .pill').forEach(p=>p.onclick=()=>{state.cls=p.dataset.val;renderClassPills();renderTable()});
+}
+/* wiring */
+function syncLvlPills(){
+  const all=!state.lvl.length;
+  $$('.pill[data-f="lvl"]').forEach(p=>p.classList.toggle('on',
+    p.dataset.val==='all'?all:state.lvl.includes(+p.dataset.val)));
+}
+function toggleLvl(v){ // multi-select level filter
+  if(v==='all')state.lvl=[];
+  else{
+    const nn=+v,i=state.lvl.indexOf(nn);
+    i>=0?state.lvl.splice(i,1):state.lvl.push(nn);
+    if(state.lvl.length===4)state.lvl=[]; // all four selected = no filter
+  }
+  syncLvlPills();renderTable();
+}
+$$('.pill[data-f="lvl"]').forEach(p=>p.onclick=()=>toggleLvl(p.dataset.val));
+$$('.pill[data-f="st"]').forEach(p=>p.onclick=()=>{
+  $$('.pill[data-f="st"]').forEach(x=>x.classList.remove('on'));p.classList.add('on');
+  state.st=p.dataset.val;renderTable();
+});
+$('#q').oninput=e=>{state.q=e.target.value.toLowerCase();renderTable()};
+$('#thead').onclick=e=>{const th=e.target.closest('th');if(!th)return;const c=th.dataset.c;
+  if(state.sort.col===c)state.sort.dir*=-1;else{state.sort.col=c;state.sort.dir=1}renderTable()};
+// AppExpandButton → fullscreen AppTableExpandDialog. The live #tblScroll node
+// is moved into the dialog (rendering/sorting keeps working), then moved back.
+$('#expandBtn').onclick=()=>{
+  $('#expTitle').textContent=$('#tblTitle').textContent;
+  $('#expandBody').appendChild($('#tblScroll'));
+  $('#tblScroll').classList.add('expanded');
+  $('#expandOverlay').classList.add('open');
+};
+function closeExpand(){
+  $('#expandOverlay').classList.remove('open');
+  $('#tblScroll').classList.remove('expanded');
+  $('#tablePanel').appendChild($('#tblScroll'));
+}
+$('#expandClose').onclick=closeExpand;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#expandOverlay').classList.contains('open'))closeExpand()});
+$$('[data-collapse]').forEach(b=>b.onclick=()=>{document.getElementById(b.dataset.collapse).classList.toggle('collapsed')});
+function exportCSV(){
+  const rows=tableRows();
+  const csv=[COLS.map(c=>HEAD[c].split('|')[0]).join(',')]
+    .concat(rows.map(s=>COLS.map(c=>{switch(c){case 'boy':case 'moy':case 'eoy':return `Level ${s[c][0]} (${s[c][1]})`;
+      default:return `"${s[c]||''}"`}}).join(','))).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='student_fp_detail.csv';a.click();
+}
+$('#exportBtn').onclick=e=>{e.stopPropagation();$('#expMenu').classList.toggle('open')};
+document.addEventListener('click',()=>$('#expMenu').classList.remove('open'));
+$$('#expMenu a').forEach(a=>a.onclick=e=>{
+  e.stopPropagation();$('#expMenu').classList.remove('open');
+  const m=a.dataset.exp;
+  if(m==='csv')exportCSV();
+  else if(m==='gs'){exportCSV();window.open('https://sheets.google.com','_blank');}
+  else window.print();
+});
+// init
+renderClassPills();renderTable();
+</script>
+</body>
+</html>

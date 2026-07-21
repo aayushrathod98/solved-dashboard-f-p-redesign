@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Component — Grade Selector</title>
+<style>
+:root{
+  /* Tokens synced to NysTheme (flutter-dashboard nys_theme.dart) */
+  --dark:#2d3748; --bg:#eef0f4; --card:#fff; --border:#e2e8f0;
+  --text:#1a202c; --muted:#718096; --faint:#a0aec0; --secondary:#4a5568;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{background:var(--bg);color:var(--text);font-size:13px;padding:26px}
+.comp-title{font-size:15px;font-weight:700;color:var(--secondary);margin-bottom:4px}
+.comp-sub{font-size:11px;color:var(--faint);margin-bottom:16px}
+/* Grade chips — full-width white strip like the model */
+.top-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap;background:#fff;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:10px 14px}
+.glabel{font-size:10px;font-weight:700;letter-spacing:.6px;color:var(--muted);margin-right:2px;text-transform:uppercase}
+.crumb{font-size:11px;font-weight:600;color:var(--secondary)}
+.grade-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+/* NysGradePillBar pill: chipBg + border inactive, header-dark active */
+.chip{border:1px solid var(--border);background:#f0f2f5;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--secondary);cursor:pointer}
+.chip.on{background:var(--dark);border-color:var(--dark);color:#fff}
+</style>
+</head>
+<body>
+
+<div class="comp-title">Grade Selector</div>
+<div class="comp-sub">Standalone component — white strip with grade pills (NysGradePillBar style) and the breadcrumb on the right. Click a pill to select a grade.</div>
+
+<div class="top-controls">
+  <div class="grade-chips" id="gradeChips">
+    <span class="glabel">Grade</span>
+    <button class="chip on" data-g="all">All Grades</button>
+    <button class="chip" data-g="K">0K</button><button class="chip" data-g="1">Gr 1</button>
+    <button class="chip" data-g="2">Gr 2</button><button class="chip" data-g="3">Gr 3</button>
+    <button class="chip" data-g="4">Gr 4</button><button class="chip" data-g="5">Gr 5</button>
+  </div>
+  <span class="crumb" id="crumb">All Grades · F&amp;P</span>
+</div>
+
+<script>
+const $$=s=>[...document.querySelectorAll(s)];
+function gLabel(g){return g==='all'?'All Grades':(g==='K'?'Grade 0K':'Grade '+g)}
+$$('#gradeChips .chip').forEach(c=>c.onclick=()=>{
+  $$('#gradeChips .chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');
+  document.getElementById('crumb').innerHTML=gLabel(c.dataset.g)+' · F&amp;P';
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Component — Detailed Analysis (Charts)</title>
+<style>
+:root{
+  /* Tokens synced to NysTheme (flutter-dashboard nys_theme.dart) */
+  --dark:#2d3748; --dark2:#374151; --bg:#eef0f4; --card:#fff; --border:#e2e8f0;
+  --text:#1a202c; --muted:#718096; --faint:#a0aec0; --secondary:#4a5568;
+  --l1:#e24b4a; --l2:#ef9f27; --l3:#639922; --l4:#378add;
+  --purple:#8158c4; --green:#639922; --orange:#ef9f27; --blue:#378add;
+  --gold:#c8972a;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{background:var(--bg);color:var(--text);font-size:13px;padding:26px}
+.comp-title{font-size:15px;font-weight:700;color:var(--secondary);margin-bottom:4px}
+.comp-sub{font-size:11px;color:var(--faint);margin-bottom:16px}
+/* Panel (AppCollapsibleCard) */
+.panel{background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 3px rgba(20,25,40,.06)}
+/* AppCollapsibleCard header: 14px/20px padding, 13px w600 white title */
+.panel-hdr{background:var(--dark);color:#fff;display:flex;align-items:center;padding:14px 20px;gap:8px}
+.panel-hdr b{font-size:13px;font-weight:600}
+.panel-hdr .sp{flex:1}
+/* white-on-header chrome (AppCollapsibleCard PDF button) */
+.pbtn{border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.15);color:#fff;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer}
+.pdfbtn{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600}
+.pdfsvg{width:13px;height:13px}
+.f-chevron svg{width:16px;height:16px;fill:#fff}
+.panel-body{display:flex;min-height:480px}
+.panel.collapsed .panel-body{display:none}
+/* chevron button (AppCollapsibleCard) */
+.f-chevron{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:13px;cursor:pointer;flex-shrink:0;transition:transform .25s ease}
+.panel-hdr:hover .f-chevron{background:rgba(255,255,255,.22)}
+.panel.collapsed .f-chevron{transform:rotate(-90deg)}
+/* NysSidebarBtn: 220px rail, 14px Material icon + 12px label, gold 3px accent when active */
+.views{width:220px;border-right:1px solid var(--border);background:#f8f9fb;flex-shrink:0}
+.views h5{font-size:10px;font-weight:700;color:var(--faint);letter-spacing:.7px;padding:10px 14px 8px;border-bottom:1px solid var(--border)}
+.views a{display:flex;gap:8px;align-items:center;padding:11px 13px;font-size:12px;font-weight:500;color:var(--secondary);text-decoration:none;border-left:3px solid transparent;cursor:pointer}
+.views a svg{width:14px;height:14px;flex-shrink:0;fill:currentColor}
+.views a.on{background:#fff;border-left-color:var(--gold);font-weight:600;color:var(--text)}
+.chart-area{flex:1;padding:18px 22px 22px 20px;min-width:0;background:var(--card)}
+.chart-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap}
+.chart-top span{color:var(--muted);font-size:12px;font-weight:500}
+/* NysSegToggle: chipBg track, 11px w600, header-dark active */
+.mseg{display:inline-flex;background:#f0f2f5;border-radius:7px;padding:2px}
+.mseg button{border:none;background:transparent;padding:5px 12px;font-size:11px;font-weight:600;color:var(--secondary);border-radius:5px;cursor:pointer;margin:0 1px}
+.mseg button.on{background:var(--dark);color:#fff}
+/* global term button colours: All Terms purple, BOY blue, MOY purple, EOY green */
+button[data-ct="all"].on{background:var(--purple)!important;color:#fff!important}
+button[data-ct="boy"].on{background:var(--l4)!important;color:#fff!important}
+button[data-ct="moy"].on{background:var(--purple)!important;color:#fff!important}
+button[data-ct="eoy"].on{background:var(--green)!important;color:#fff!important}
+.charts{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.charts.one{grid-template-columns:1fr}
+.c1{color:var(--l1)} .c2{color:var(--l2)} .c3{color:var(--l3)} .c4{color:var(--l4)}
+.f1{background:var(--l1)} .f2{background:var(--l2)} .f3{background:var(--l3)} .f4{background:var(--l4)}
+/* axis charts — NysVerticalBarChart geometry: 9px faint y-axis, level-colored
+   9px w800 % above each bar, count inside the bar (12px w800 white),
+   10px w700 level-colored x labels, #EDF2F7 grid / #CBD5E0 edges */
+.axwrap h6{text-align:center;color:var(--secondary);letter-spacing:.6px;font-size:11px;font-weight:700;margin-bottom:14px}
+.axbody{display:flex;gap:4px}
+.yax{display:flex;flex-direction:column;justify-content:space-between;height:200px;font-size:9px;color:var(--faint);text-align:right}
+.plotcol{flex:1;min-width:0}
+.plot{position:relative;height:200px;display:flex;align-items:flex-end;gap:12px;padding:0 10px;border-bottom:1px solid #cbd5e0}
+.plot .gl{position:absolute;left:0;right:0;border-top:1px solid #edf2f7;z-index:0}
+.plot .gl.edge{border-top-color:#cbd5e0}
+.abar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;position:relative;z-index:1}
+.blab{font-size:9px;font-weight:800;text-align:center;line-height:1.3;margin-bottom:2px}
+.afill{width:100%;border-radius:2px 2px 0 0;min-height:2px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;overflow:hidden}
+.caps{display:flex;gap:12px;padding:6px 10px 0}
+.caps span{flex:1;text-align:center;font-size:10px;font-weight:700;color:var(--secondary)}
+.caps span.c1{color:var(--l1)} .caps span.c2{color:var(--l2)} .caps span.c3{color:var(--l3)} .caps span.c4{color:var(--l4)}
+.abar[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:102%;left:50%;transform:translateX(-50%);background:#2d3748;color:#fff;padding:8px 12px;border-radius:6px;font-size:11px;white-space:pre;z-index:6;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none}
+.abar[data-tip]:hover .afill{filter:brightness(1.12)}
+/* horizontal comparison bars (NysCmpBar style) */
+.hchart{margin-bottom:18px}
+.hchart h6{text-align:left;color:var(--secondary);font-size:11px;font-weight:700;letter-spacing:.6px;margin-bottom:10px}
+.hrow{display:flex;align-items:center;gap:14px;margin:10px 0;position:relative}
+.hrow .hlab{width:42px;text-align:right;font-weight:600;font-size:12px;color:var(--secondary)}
+.htrack{flex:1;background:var(--border);border-radius:3px;height:16px;overflow:hidden}
+.hfill{background:var(--l4);height:100%;border-radius:3px;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;padding-left:8px;min-width:32px}
+.hrow[data-tip]:hover::after{content:attr(data-tip);position:absolute;left:56px;bottom:115%;background:#2d3748;color:#fff;padding:10px 14px;border-radius:6px;font-size:11px;white-space:pre;z-index:6;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.hlab.wide{width:130px}
+.hscroll{max-height:430px;overflow-y:auto;padding-right:6px}
+.hscroll::-webkit-scrollbar{width:8px}
+.hscroll::-webkit-scrollbar-thumb{background:#d3d8e0;border-radius:4px}
+/* NysLegendChip: 11×11 radius-2 swatch + 11px w600 secondary label */
+.hlegend{display:flex;justify-content:flex-end;gap:8px;align-items:center;font-size:11px;font-weight:600;color:var(--secondary);margin-top:10px}
+.hlegend i{width:11px;height:11px;border-radius:2px;background:var(--l4);display:inline-block}
+/* proficiency donuts with slice labels + tooltip */
+.donut-wrap{position:relative}
+.donut-wrap h6{color:var(--secondary);font-size:11px;font-weight:700;letter-spacing:.6px}
+.donut2{width:190px;height:190px;border-radius:50%;position:relative}
+.donut2::after{content:"";position:absolute;inset:52px;background:#fff;border-radius:50%}
+.dlblg,.dlblr{position:absolute;color:#fff;font-weight:700;font-size:12.5px;text-align:center;line-height:1.35;z-index:2}
+.dlblg{right:10px;top:50%;transform:translateY(-50%)}
+.dlblr{left:14px;top:34%}
+.donut-wrap[data-tip]:hover::after{content:attr(data-tip);position:absolute;top:-6px;left:50%;transform:translate(-50%,-100%);background:#2d3748;color:#fff;padding:10px 14px;border-radius:6px;font-size:11px;white-space:pre;z-index:8;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none}
+/* _IsaLevelLegend chips: 11×11 swatch + 11px w500 secondary text */
+.legend{display:flex;gap:20px;font-size:11px;font-weight:500;color:var(--secondary);flex-wrap:wrap;justify-content:center}
+.ldot{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+</style>
+</head>
+<body>
+
+<div class="comp-title">Detailed Analysis — Charts</div>
+<div class="comp-sub">Standalone component — dark collapsible panel with the VIEWS sidebar (Material icons, gold active accent), term toggle and all five chart views, computed from the same seeded K–5 dataset (229 students).</div>
+
+<div class="panel" id="analysisPanel">
+  <div class="panel-hdr"><b id="panelTitle">K–5 F&amp;P — Detailed Analysis</b><span class="sp"></span><button class="pbtn pdfbtn" onclick="window.print()"><svg class="pdfsvg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg> PDF</button><button class="f-chevron" data-collapse="analysisPanel"><svg viewBox="0 0 24 24"><path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg></button></div>
+  <div class="panel-body">
+    <nav class="views" id="views">
+      <h5>VIEWS</h5>
+      <!-- 14px Material icons, matching NysSidebarBtn (bar_chart / donut_large /
+           stacked_bar_chart / trending_up / equalizer) -->
+      <a class="on" data-v="perf"><svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg> Performance Levels</a>
+      <a data-v="prof"><svg viewBox="0 0 24 24"><path d="M11 5.08V2c-5 .5-9 4.81-9 10s4 9.5 9 10v-3.08c-3-.48-6-3.4-6-6.92s3-6.44 6-6.92zM18.97 11H22c-.47-5-4-8.53-9-9v3.08c3 .43 5.54 2.97 5.97 5.92zM13 18.92V22c5-.47 8.53-4 9-9h-3.03c-.43 3-2.97 5.49-5.97 5.92z"/></svg> Proficiency</a>
+      <a data-v="dist"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="4" height="9"/><rect x="4" y="6" width="4" height="4"/><rect x="10" y="8" width="4" height="12"/><rect x="10" y="3" width="4" height="4"/><rect x="16" y="13" width="4" height="7"/><rect x="16" y="9" width="4" height="3"/></svg> F&amp;P Distribution</a>
+      <a data-v="growth"><svg viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg> Growth Analysis</a>
+      <a data-v="cc"><svg viewBox="0 0 24 24"><path d="M10 20h4V4h-4v16zm-6 0h4v-8H4v8zM16 9v11h4V9h-4z"/></svg> Class Comparison</a>
+    </nav>
+    <div class="chart-area">
+      <div class="chart-top"><span id="viewTitle"></span>
+        <div class="mseg" id="chartTermSeg">
+          <button class="on" data-ct="all">All Terms</button><button data-ct="boy">BOY</button><button data-ct="moy">MOY</button><button data-ct="eoy">EOY</button>
+        </div>
+      </div>
+      <div id="chartHost"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= DATA (identical to the full prototype) ================= */
+const BANDS={K:{1:['A'],2:['B'],3:['C','D'],4:['E','F']},
+ '1':{1:['C','D'],2:['E','F'],3:['G','H','I','J'],4:['K','L']},
+ '2':{1:['F','G','H'],2:['I','J','K'],3:['L','M'],4:['N','O','P']},
+ '3':{1:['I','J','K'],2:['L','M','N'],3:['O','P'],4:['Q','R','S']},
+ '4':{1:['L','M','N'],2:['O','P','Q'],3:['R','S'],4:['T','U']},
+ '5':{1:['O','P','Q'],2:['R','S','T'],3:['U','V'],4:['W','X','Y','Z']}};
+const HOMEROOMS={K:['11','12','13'],'1':['101','102','103'],'2':['201','202','203'],'3':['301','302','303'],'4':['401','402','404'],'5':['501','502','503']};
+const REAL=[
+ {name:'ELERS, Loaai',grade:'3',hr:'303',sex:'M',iep:'Yes',ell:'No',eth:'Black',boy:[2,'L'],moy:[3,'O'],eoy:[2,'O']},
+ {name:'CARRANZA, Angie',grade:'5',hr:'501',sex:'M',iep:'No',ell:'No',eth:'Black',boy:[2,'R'],moy:[4,'V'],eoy:[1,'T']},
+ {name:'GARIDIS, Omniya Yas',grade:'2',hr:'203',sex:'M',iep:'Yes',ell:'Yes',eth:'Hispanic',boy:[2,'I'],moy:[2,'K'],eoy:[2,'L']},
+ {name:'ABDRABOU, Hala',grade:'3',hr:'302',sex:'F',iep:'No',ell:'No',eth:'Black',boy:[4,'N'],moy:[4,'S'],eoy:[1,'J']},
+ {name:'ANAGNOSTOS, Karamjot',grade:'4',hr:'401',sex:'M',iep:'No',ell:'No',eth:'Black',boy:[1,'M'],moy:[2,'Q'],eoy:[3,'S']},
+ {name:'ANDRADE, Kenneth',grade:'4',hr:'401',sex:'M',iep:'Yes',ell:'No',eth:'Black',boy:[3,'R'],moy:[2,'Q'],eoy:[3,'S']},
+ {name:'CARRERA, Hana',grade:'4',hr:'401',sex:'F',iep:'No',ell:'No',eth:'Hispanic',boy:[3,'R'],moy:[3,'S'],eoy:[4,'U']},
+ {name:'CORTIZO, Mehvaj',grade:'4',hr:'402',sex:'M',iep:'No',ell:'No',eth:'Hispanic',boy:[3,'S'],moy:[3,'S'],eoy:[4,'T']},
+ {name:'ABDELHADY, Fady',grade:'5',hr:'501',sex:'M',iep:'No',ell:'No',eth:'Hispanic',boy:[1,'P'],moy:[3,'U'],eoy:[4,'W']},
+ {name:'ABOTALEB, Jacqueline',grade:'1',hr:'101',sex:'F',iep:'No',ell:'No',eth:'White',boy:[2,'E'],moy:[2,'F'],eoy:[2,'F']},
+ {name:'KALLONAS, Nicolasa',grade:'1',hr:'102',sex:'M',iep:'No',ell:'No',eth:'Hispanic',boy:[1,'C'],moy:[2,'E'],eoy:[4,'K']}
+];
+const MARG={boy:{1:38,2:79,3:69,4:43},moy:{1:30,2:48,3:98,4:53},eoy:{1:20,2:43,3:106,4:60}};
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd=mulberry32(456);
+const SUR=['ACOSTA','BAILEY','BARNES','BRAVO','CALDERON','CAMPOS','CASTRO','CHEN','CLARKE','DELGADO','DIALLO','DUKE','ESPINAL','FIGUEROA','FLORES','FRANCIS','GOMEZ','GRANT','GUZMAN','HARRIS','HUANG','IBRAHIM','JACKSON','JAMES','JIMENEZ','KHAN','LOPEZ','MARTE','MENDOZA','MORALES','NUNEZ','OKAFOR','ORTIZ','PAULINO','PEREZ','RAMOS','REYES','RIVERA','ROSARIO','SANTOS','TAVAREZ','TORRES','VARGAS','WILLIAMS','WRIGHT'];
+const FIR=['Aaliyah','Amir','Ana','Andre','Aria','Brandon','Camila','Carlos','Chloe','Daniel','Destiny','Elijah','Emma','Ethan','Fatima','Gabriel','Genesis','Hassan','Isabella','Jayden','Jose','Josiah','Kayla','Kevin','Leah','Liam','Luna','Malik','Maria','Mateo','Maya','Melanie','Mia','Miguel','Naomi','Nathan','Nia','Noah','Olivia','Omar','Sofia','Tyler','Valeria','Xavier','Zoe'];
+const ETHS=['Black','Hispanic','White','Asian'];
+function pick(a){return a[Math.floor(rnd()*a.length)]}
+function letterFor(g,l,i){const b=BANDS[g][l];return b[i%b.length]}
+const STUDENTS=[...REAL.map((r,i)=>({id:'r'+i,...r,real:true}))];
+const QUOTA={K:39,'1':37,'2':37,'3':37,'4':32,'5':36};
+const used=new Set(REAL.map(r=>r.name));
+let n=0;
+for(const g of ['K','1','2','3','4','5']){
+  for(let i=0;i<QUOTA[g];i++){
+    let nm;do{nm=pick(SUR)+', '+pick(FIR)}while(used.has(nm));used.add(nm);
+    STUDENTS.push({id:'g'+(n++),name:nm,grade:g,hr:HOMEROOMS[g][i%HOMEROOMS[g].length],
+      sex:rnd()<.5?'M':'F',iep:rnd()<.17?'Yes':'No',ell:rnd()<.14?'Yes':'No',eth:ETHS[Math.floor(rnd()*4)],
+      boy:null,moy:null,eoy:null,real:false});
+  }
+}
+function poolFor(term){
+  const m={...MARG[term]};
+  REAL.forEach(r=>m[r[term][0]]--);
+  const pool=[];for(const l of [1,2,3,4])for(let i=0;i<m[l];i++)pool.push(l);
+  return pool;
+}
+const gen=STUDENTS.filter(s=>!s.real);
+let bp=poolFor('boy');for(let i=bp.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[bp[i],bp[j]]=[bp[j],bp[i]]}
+gen.forEach((s,i)=>{const l=bp[i];s.boy=[l,letterFor(s.grade,l,i)]});
+function assignSorted(term,prev){
+  const pool=poolFor(term).sort((a,b)=>a-b);
+  const order=[...gen].map((s,i)=>({s,k:s[prev][0]+rnd()*.8})).sort((a,b)=>a.k-b.k);
+  order.forEach((o,i)=>{const l=pool[i];o.s[term]=[l,letterFor(o.s.grade,l,i)]});
+}
+assignSorted('moy','boy');assignSorted('eoy','moy');
+
+/* ================= CHARTS (identical rendering to the full prototype) ================= */
+const $=s=>document.querySelector(s);const $$=s=>[...document.querySelectorAll(s)];
+const TERMS=['boy','moy','eoy'];const TNAME={boy:'BOY',moy:'MOY',eoy:'EOY'};
+function counts(P,term){const c={1:0,2:0,3:0,4:0};P.forEach(s=>c[s[term][0]]++);return c}
+function pct(a,b){return b?Math.round(a/b*100):0}
+function pct1(a,b){return b?+(a/b*100).toFixed(1):0}
+const VIEWTITLES={perf:'Performance Levels',prof:'Proficiency (L3+L4)',dist:'F&P Level Distribution — students per reading level letter',growth:'Growth Analysis (level change)',cc:'Class Comparison'};
+let view='perf';let chartTerm='all';
+function axChart(title,items){ // NysVerticalBarChart: % above bar, count inside, colored x labels
+  const gls=[20,40,60,80,100].map(p=>`<div class="gl${p===100?' edge':''}" style="bottom:${p}%"></div>`).join('');
+  return `<div class="axwrap"><h6>${title}</h6><div class="axbody">
+    <div class="yax"><span>100%</span><span>80%</span><span>60%</span><span>40%</span><span>20%</span><span>0%</span></div>
+    <div class="plotcol"><div class="plot">${gls}${items.map(i=>`<div class="abar"${i.tip?` data-tip="${i.tip}" title="${i.tip}"`:''}><div class="blab ${i.cls.replace('f','c')}">${i.pct}%</div><div class="afill ${i.cls}" style="height:${i.pct}%">${i.count||''}</div></div>`).join('')}</div>
+    <div class="caps">${items.map(i=>`<span class="${i.cls.replace('f','c')}">${i.cap}</span>`).join('')}</div></div></div></div>`;
+}
+function renderCharts(){
+  const P=STUDENTS;const host=$('#chartHost');
+  const terms=chartTerm==='all'?TERMS:[chartTerm];
+  $('#viewTitle').textContent='K–5 — '+VIEWTITLES[view];
+  if(view==='perf'){host.innerHTML=`<div class="charts ${terms.length===1?'one':''}">${terms.map(t=>{const c=counts(P,t);
+    return axChart(TNAME[t],[1,2,3,4].map(l=>({cap:'Level '+l,cls:'f'+l,count:c[l],pct:pct1(c[l],P.length),
+      tip:`${TNAME[t]} · Level ${l}&#10;${c[l]} of ${P.length} students · ${pct1(c[l],P.length)}%`})))}).join('')}</div>`}
+  else if(view==='prof'){ // donuts with slice labels + hover tooltip (live F&P style)
+    host.innerHTML=`<div class="charts ${terms.length===1?'one':''}">${terms.map(t=>{
+      const c=counts(P,t);const nn=c[3]+c[4];const np=P.length-nn;const p=pct(nn,P.length);
+      return `<div class="donut-wrap" data-tip="${TNAME[t]} · Proficiency&#10;Proficient (L3+L4): ${nn} of ${P.length} students · ${p}%&#10;Not Proficient: ${np} of ${P.length} students · ${100-p}%">
+        <h6 style="text-align:center;margin-bottom:12px">${TNAME[t]}</h6>
+        <div class="donut2" style="margin:0 auto;background:conic-gradient(var(--l3) 0 ${p}%,var(--l1) ${p}% 100%)">
+          <span class="dlblg">${nn}<br>${p}%</span><span class="dlblr">${np}<br>${100-p}%</span>
+        </div>
+        <div class="legend" style="margin-top:12px"><span><i class="ldot" style="background:var(--l3)"></i>Proficient (L3–L4)</span><span><i class="ldot" style="background:var(--l1)"></i>Not Proficient</span></div>
+      </div>`;
+    }).join('')}</div>`}
+  else if(view==='dist'){ // letter label + track + fill, count & share inside
+    const tcol={boy:'var(--l4)',moy:'var(--purple)',eoy:'var(--green)'};
+    host.innerHTML=`<div class="charts ${terms.length===1?'one':''}">${terms.map(t=>{
+      const m={};P.forEach(s=>{m[s[t][1]]=(m[s[t][1]]||0)+1});const ks=Object.keys(m).sort();
+      const mx=Math.max(...Object.values(m),1);
+      return `<div class="hchart"><h6 style="color:${tcol[t]}">${TNAME[t]}</h6><div class="hscroll">${ks.map(k=>{
+        const p=pct(m[k],P.length);
+        return `<div class="hrow" data-tip="${TNAME[t]} · Letter ${k}&#10;${m[k]} of ${P.length} students · ${p}%"><span class="hlab">${k}</span><div class="htrack"><div class="hfill" style="width:${Math.max(8,m[k]/mx*100).toFixed(1)}%">${m[k]} (${p}%)</div></div></div>`;
+      }).join('')}</div></div>`;
+    }).join('')}</div>
+    <div class="hlegend" style="justify-content:center;margin-top:16px"><i></i># Students per F&amp;P letter</div>`;
+  }
+  else if(view==='growth'){ // horizontal comparison bars
+    const m={'−2 or less':0,'−1 level':0,'No change':0,'+1 level':0,'+2 or more':0};
+    P.forEach(s=>{const d=s.eoy[0]-s.boy[0];m[d<=-2?'−2 or less':d===-1?'−1 level':d===0?'No change':d===1?'+1 level':'+2 or more']++});
+    host.innerHTML=`<div class="hchart"><h6>Level change BOY→EOY (${P.length} students)</h6>
+      ${Object.keys(m).map(k=>{const p=pct(m[k],P.length);
+        return `<div class="hrow" data-tip="${k}&#10;${m[k]} of ${P.length} students · ${p}%"><span class="hlab wide">${k}</span><div class="htrack"><div class="hfill" style="width:${p}%">${p}%</div></div></div>`;}).join('')}
+      <div class="hlegend"><i></i>% of students</div></div>`;
+  }
+  else if(view==='cc'){ // term-colored titles, pill bars, tooltip, centered legend
+    const hrs={};P.forEach(s=>{(hrs[s.hr]=hrs[s.hr]||[]).push(s)});
+    const ks=Object.keys(hrs).sort();
+    const tcol={boy:'var(--l4)',moy:'var(--purple)',eoy:'var(--green)'};
+    host.innerHTML=`<div class="charts ${terms.length===1?'one':''}">${terms.map(t=>{
+      return `<div class="hchart"><h6 style="color:${tcol[t]}">${TNAME[t]}</h6><div class="hscroll">${ks.map(k=>{
+        const c=counts(hrs[k],t);const nn=c[3]+c[4];const p=pct(nn,hrs[k].length);
+        return `<div class="hrow" data-tip="${TNAME[t]} · Class ${k}&#10;Proficient (L3+L4): ${nn} of ${hrs[k].length} students · ${p}%"><span class="hlab">${k}</span><div class="htrack">${p?`<div class="hfill" style="width:${p}%">${p}%</div>`:''}</div></div>`;
+      }).join('')}</div></div>`;
+    }).join('')}</div>
+    <div class="hlegend" style="justify-content:center;margin-top:16px"><i></i>Proficient (L3+L4)</div>`;
+  }
+}
+/* wiring */
+$$('#views a').forEach(a=>a.onclick=()=>{$$('#views a').forEach(x=>x.classList.remove('on'));a.classList.add('on');view=a.dataset.v;renderCharts()});
+$$('#chartTermSeg button').forEach(b=>b.onclick=()=>{
+  $$('#chartTermSeg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  chartTerm=b.dataset.ct;renderCharts();
+});
+$$('[data-collapse]').forEach(b=>b.onclick=()=>{document.getElementById(b.dataset.collapse).classList.toggle('collapsed')});
+renderCharts();
+</script>
+</body>
+</html>
