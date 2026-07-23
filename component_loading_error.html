@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Component — Loading &amp; Error States</title>
+<style>
+:root{
+  /* Tokens synced to NysTheme (flutter-dashboard nys_theme.dart) */
+  --dark:#2d3748; --dark2:#374151; --bg:#eef0f4; --card:#fff; --border:#e2e8f0;
+  --text:#1a202c; --muted:#718096; --faint:#a0aec0; --secondary:#4a5568;
+  --l1:#e24b4a; --l2:#ef9f27; --l3:#639922; --l4:#378add;
+  --purple:#8158c4; --green:#639922;
+  --gold:#c8972a;
+  --l1bg:#fef2f2;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+body{background:var(--bg);color:var(--text);font-size:13px;padding:26px}
+.comp-title{font-size:15px;font-weight:700;color:var(--secondary);margin-bottom:4px}
+.comp-sub{font-size:11px;color:var(--faint);margin-bottom:16px}
+.sec-label{font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--muted);text-transform:uppercase;margin:26px 0 10px}
+.sec-label:first-of-type{margin-top:10px}
+
+/* ---------- KPI score-card skeletons (FIX #10) ---------- */
+/* Same NysScoreCard chrome as the loaded cards: white wrapper card,
+   per-subject rows, 4px left stripe — values replaced by shimmer bars */
+.kpi-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:14px 16px}
+.kpi-row{display:grid;grid-template-columns:64px repeat(6,1fr);gap:10px;align-items:stretch}
+.kpi-row + .kpi-row{margin-top:10px}
+.kpi-subject{display:flex;align-items:center;font-weight:700;font-size:12px;letter-spacing:.5px}
+.kpi-subject.math{color:var(--purple)}
+.kpi-subject.ela{color:var(--green)}
+.kpi{position:relative;border:1px solid var(--border);border-radius:8px;padding:12px 12px 13px 14px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.07);overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--muted)}
+.skel{display:inline-block;height:26px;width:70%;border-radius:6px;
+  background:linear-gradient(90deg,#eceef2 25%,#f6f7f9 37%,#eceef2 63%);
+  background-size:400% 100%;animation:shimmer 1.3s ease-in-out infinite}
+.skel.small{height:11px;width:55%;margin-top:8px}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+
+/* ---------- Loading panel (FIX #9 + #11: plain-language copy) ---------- */
+.panel{background:#fff;border:1px solid var(--border);border-radius:8px;margin-top:14px;overflow:hidden;box-shadow:0 1px 3px rgba(20,25,40,.06)}
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:70px 0;color:var(--muted);font-size:12px}
+.loading .l1txt{font-weight:700;color:var(--text)}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Error card (FIX #12: friendly message, no technical details) ---------- */
+.errorbox{background:#fff;border:1px solid #f3c6c6;border-radius:8px;padding:34px;text-align:center;box-shadow:0 1px 3px rgba(20,25,40,.06)}
+.errorbox .eicon{width:44px;height:44px;border-radius:50%;background:var(--l1bg);color:var(--l1);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;margin:0 auto 12px}
+.errorbox h4{margin:0 0 6px;color:var(--text);font-size:15px;font-weight:700}
+.errorbox p{margin:0 0 16px;color:var(--muted);font-size:12px}
+.errorbox button{background:var(--dark);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-weight:600;font-size:12px;cursor:pointer}
+.errorbox button:hover{background:var(--dark2)}
+
+.hidden{display:none !important}
+
+@media (max-width:1100px){.kpi-row{grid-template-columns:64px repeat(3,1fr)}}
+@media (max-width:640px){.kpi-row{grid-template-columns:64px repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="comp-title">Loading &amp; Error States</div>
+<div class="comp-sub">Standalone component — same markup and styling as the NYS Grade 4 prototype. Loading: skeleton score cards instead of fake "0" values (Fix&nbsp;#10) and plain-language copy (Fix&nbsp;#9,&nbsp;#11). Error: friendly message with technical details kept out of the UI (Fix&nbsp;#12). The Retry button plays the loading state, then returns here.</div>
+
+<!-- ============ LOADING STATE (FIX #9, #10, #11) ============ -->
+<div class="sec-label">Loading state</div>
+<div id="loadingDemo">
+  <div class="kpi-wrap">
+    <div class="kpi-row"><div class="kpi-subject math">MATH</div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+    </div>
+    <div class="kpi-row"><div class="kpi-subject ela">ELA</div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+      <div class="kpi"><div class="skel"></div><div class="skel small"></div></div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div class="l1txt">Loading exam data for 2024–2025…</div>
+      <div>Loading dashboard…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ERROR STATE (FIX #12) ============ -->
+<div class="sec-label">Error state</div>
+<div id="errorDemo">
+  <div class="errorbox" id="errorBox">
+    <div class="eicon">!</div>
+    <h4>We couldn't load the exam data</h4>
+    <p>Something went wrong while loading this page. Check your connection and try again.</p>
+    <button id="retryBtn">↻ Retry</button>
+  </div>
+  <!-- inline loading shown while a retry is "in flight" -->
+  <div class="panel hidden" id="retryLoading">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div class="l1txt">Loading exam data for 2024–2025…</div>
+      <div>Loading dashboard…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Retry demo: swap the error card for the loading panel, then return */
+document.getElementById('retryBtn').onclick=()=>{
+  document.getElementById('errorBox').classList.add('hidden');
+  document.getElementById('retryLoading').classList.remove('hidden');
+  setTimeout(()=>{
+    document.getElementById('retryLoading').classList.add('hidden');
+    document.getElementById('errorBox').classList.remove('hidden');
+  },1800);
+};
+</script>
+</body>
+</html>
